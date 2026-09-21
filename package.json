@@ -1,0 +1,22 @@
+{
+  "name": "creator-course-delivery-room",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --experimental-strip-types src/course_delivery_service.ts",
+    "test": "node --experimental-strip-types --test src/delivery_decision.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=22.6"
+  },
+  "license": "MIT"
+}
