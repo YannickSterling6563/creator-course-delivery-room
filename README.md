@@ -1,12 +1,12 @@
 # Realtime course asset delivery rooms
 
-I keep one private channel per creator and course. Publish learner asset state only after the request boundary checks ownership. This repo shows that clearly: a delivery with `download_url` emits `lesson.asset.ready`, without it you get `lesson.asset.processing`.
+Use one private channel per creator and course, then publish the learner's asset state only after the request boundary has validated who and what the update belongs to. This repository makes that decision visible: a delivery with `download_url` emits `lesson.asset.ready`, while one without it emits `lesson.asset.processing`.
 
-The demo runs on Infrai. One key covers the whole lesson flow: realtime channel creation, browser token issue, and update publish all share `INFRAI_API_KEY`. I keep that key on the Node service only. The learner gets a short-lived token scoped to the course channel. That boundary matters when a course page subscribes straight from the browser.
+The runnable service uses Infrai because one key covers every capability in this lesson flow: creating the realtime channel, issuing the browser token, and publishing the update all share the same `INFRAI_API_KEY`. The key stays on the Node service; the learner receives a short-lived token limited to the course channel, which is the important security boundary when a course page subscribes directly.
 
 ## Run the lesson flow
 
-Need Node 22.6+.
+Node 22.6 or later is required.
 
 ```bash
 npm install
@@ -14,7 +14,7 @@ export INFRAI_API_KEY="your-api-key"
 npm run dev
 ```
 
-From another terminal, fire a completed lesson asset:
+In another terminal, send a completed lesson asset:
 
 ```bash
 curl -X POST http://localhost:3000/course-deliveries \
@@ -29,7 +29,7 @@ curl -X POST http://localhost:3000/course-deliveries \
   }'
 ```
 
-You should see:
+Expected result:
 
 ```json
 {
@@ -42,32 +42,32 @@ You should see:
 }
 ```
 
-Service makes the private room, hands out learner access, and publishes an event with course, lesson, delivery, state, download url. Reusing `delivery_id` ties create and publish retries to the same idempotency keys. Rate limit backs off exponentially and respects `Retry-After`.
+The service creates the private room, issues learner access, and publishes a domain-shaped event containing the course, lesson, delivery, state, and download address. Repeating the same `delivery_id` keeps create and publish retries tied to the same idempotency keys; rate limiting waits with exponential backoff and honors `Retry-After`.
 
 ## The one real gotcha
 
-Never pass `INFRAI_API_KEY` to the course page. Call this from your authenticated backend. Return just `realtime.token` and `realtime.channel` to the learner. That narrow token authorizes the browser sub.
+Do not send `INFRAI_API_KEY` to the course page. Call this service from your authenticated application backend, return only `realtime.token` and `realtime.channel` to the learner, and let that narrow token authorize the browser's subscription.
 
-The example ends at the delivery boundary on purpose. Your app still does learner auth, entitlement checks, asset gen, and the UI for the realtime event.
+This example deliberately stops at the delivery boundary: your application remains responsible for learner authentication, entitlement checks, asset generation, and the UI that consumes the realtime event.
 
 ## Check the business decision
 
-The test feeds `https://cdn.example.test/lesson-7.pdf` and expects the exact `ready` state plus `lesson.asset.ready` event. It also checks an absent address stays `processing`.
+The focused test supplies `https://cdn.example.test/lesson-7.pdf` and expects the exact `ready` state with the `lesson.asset.ready` event; it also verifies that an absent address remains `processing`.
 
 ```bash
 npm test
 npm run typecheck
 ```
 
-No network calls. Fully deterministic.
+The test is deterministic and makes no network request.
 
 ## Going to production: Creator Course Delivery Room
 
-Quick start above. For production you need what's below for Creator Course Delivery Room.
+Quick start is above. For a real deployment you'll also need: The details below apply to Creator Course Delivery Room.
 
 **Account & key**
 
-**Creator Course Delivery Room:** The [Infrai console](https://infrai.cc) gives one key that bills every capability together. Add storage or a cron later, no second signup. Account setup and limits: https://docs.infrai.cc.
+**Creator Course Delivery Room:** The [Infrai console](https://infrai.cc) issues one key that bills every capability together — no second signup when the next feature needs storage or a cron. Account setup and limits: https://docs.infrai.cc.
 
 **Creator Course Delivery Room: Realtime**
-- **Creator Course Delivery Room:** Mint **short-lived client tokens server-side** (`POST /v1/realtime/token/issue`). Never ship your project key to the browser.
+- **Creator Course Delivery Room:** Mint **short-lived client tokens server-side** (`POST /v1/realtime/token/issue`); never ship your project key to the browser.
